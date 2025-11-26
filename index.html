@@ -3,144 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMAT組長意見收集報告</title>
+    <title>營隊組織風險評估報告</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Firebase Configuration
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-        // Authentication & Real-time Logic
-        const initAuth = async () => {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-        };
-
-        initAuth();
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                console.log("User authenticated:", user.uid);
-                setupRealtimeChat(user);
-            }
-        });
-
-        // Chat Logic
-        function setupRealtimeChat(user) {
-            const commentsContainer = document.getElementById('comments-list');
-            const collectionPath = collection(db, 'artifacts', appId, 'public', 'data', 'gmat_comments');
-
-            // Listen for changes
-            onSnapshot(collectionPath, (snapshot) => {
-                const messages = [];
-                snapshot.forEach((doc) => {
-                    messages.push({ id: doc.id, ...doc.data() });
-                });
-
-                // Client-side sorting (Rule 2: No complex queries)
-                messages.sort((a, b) => b.timestamp - a.timestamp); // Newest first
-
-                renderMessages(messages);
-            }, (error) => {
-                console.error("Error fetching comments:", error);
-            });
-        }
-
-        function renderMessages(messages) {
-            const container = document.getElementById('comments-list');
-            container.innerHTML = '';
-
-            if (messages.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#aaa; margin-top:20px;">目前尚無討論，歡迎發表第一則意見。</p>';
-                return;
-            }
-
-            messages.forEach(msg => {
-                const date = new Date(msg.timestamp);
-                const timeString = date.toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-                
-                const msgEl = document.createElement('div');
-                msgEl.className = 'message-card reveal active'; // Force active to show immediately
-                msgEl.innerHTML = `
-                    <div class="msg-header">
-                        <span class="msg-author"><i class="fa-solid fa-user-circle"></i> ${escapeHtml(msg.sender)}</span>
-                        <span class="msg-time">${timeString}</span>
-                    </div>
-                    <div class="msg-content">${escapeHtml(msg.text).replace(/\n/g, '<br>')}</div>
-                `;
-                container.appendChild(msgEl);
-            });
-        }
-
-        // Send Message Function (Exposed to window)
-        window.sendMessage = async function() {
-            const nameInput = document.getElementById('sender-name');
-            const textInput = document.getElementById('message-text');
-            const btn = document.getElementById('send-btn');
-
-            const sender = nameInput.value.trim() || '匿名成員';
-            const text = textInput.value.trim();
-
-            if (!text) return alert("請輸入留言內容");
-
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 傳送中...';
-
-            try {
-                if (!auth.currentUser) await initAuth();
-                
-                const collectionPath = collection(db, 'artifacts', appId, 'public', 'data', 'gmat_comments');
-                await addDoc(collectionPath, {
-                    sender: sender,
-                    text: text,
-                    timestamp: Date.now(),
-                    userId: auth.currentUser.uid
-                });
-
-                textInput.value = ''; // Clear text, keep name
-            } catch (error) {
-                console.error("Error sending message:", error);
-                alert("傳送失敗，請稍後再試");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '送出意見 <i class="fa-solid fa-paper-plane"></i>';
-            }
-        }
-
-        function escapeHtml(text) {
-            if (!text) return "";
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
-    </script>
-
     <style>
         :root {
             --bg-dark: #050505;
             --bg-card: rgba(30, 30, 30, 0.6);
-            --accent-blue: #4d94ff;
-            --accent-purple: #9d4dff;
+            --accent-red: #ff4d4d;
+            --accent-green: #4caf50;
             --text-main: #ffffff;
             --text-muted: #a0a0a0;
+            --glow-red: 0 0 20px rgba(255, 77, 77, 0.3);
+            --glow-green: 0 0 20px rgba(76, 175, 80, 0.3);
         }
 
         * {
@@ -165,222 +43,165 @@
             width: 100vw;
             height: 100vh;
             z-index: -1;
-            background: radial-gradient(circle at 20% 20%, rgba(77, 148, 255, 0.08), transparent 40%),
-                        radial-gradient(circle at 80% 80%, rgba(157, 77, 255, 0.05), transparent 40%);
+            background: radial-gradient(circle at 15% 50%, rgba(255, 77, 77, 0.08), transparent 25%),
+                        radial-gradient(circle at 85% 30%, rgba(76, 175, 80, 0.05), transparent 25%);
             filter: blur(40px);
         }
 
         /* 區塊通用設定 */
         section {
-            min-height: 80vh; /* Slightly reduced height for better flow */
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 60px 20px;
+            padding: 80px 20px;
             position: relative;
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
         /* 標題樣式 */
         h1 {
-            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-size: clamp(3rem, 6vw, 5rem);
             font-weight: 900;
-            line-height: 1.2;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
             margin-bottom: 2rem;
-            text-align: center;
+            background: linear-gradient(to right, #fff, #aaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         h1 span {
-            background: linear-gradient(to right, var(--accent-blue), var(--accent-purple));
+            background: linear-gradient(to right, var(--accent-red), #ff8f8f);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             display: block;
         }
 
         h2 {
-            font-size: clamp(1.8rem, 3vw, 2.5rem);
-            margin-bottom: 2rem;
+            font-size: clamp(2rem, 4vw, 3rem);
+            margin-bottom: 3rem;
             position: relative;
             display: inline-block;
-            border-bottom: 3px solid var(--accent-blue);
-            padding-bottom: 10px;
+        }
+        
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 60px;
+            height: 4px;
+            background: var(--accent-red);
+            border-radius: 2px;
         }
 
         p {
-            font-size: 1.15rem;
+            font-size: 1.25rem;
             color: var(--text-muted);
             max-width: 800px;
-            margin-bottom: 1.5rem;
+        }
+
+        .highlight {
+            color: var(--accent-red);
+            font-weight: 700;
         }
 
         /* 卡片設計 */
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            width: 100%;
+        }
+
         .card {
             background: var(--bg-card);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 30px;
+            border-radius: 20px;
+            padding: 40px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border-color: rgba(255, 77, 77, 0.3);
+        }
+
+        .card i {
+            font-size: 3rem;
+            color: var(--accent-red);
             margin-bottom: 20px;
-            width: 100%;
-            transition: transform 0.3s ease;
+            display: inline-block;
         }
 
         .card h3 {
-            color: #fff;
-            margin-bottom: 10px;
-            font-size: 1.3rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .card h3 i {
-            color: var(--accent-blue);
-        }
-
-        /* 列表樣式 */
-        .issue-list {
-            list-style: none;
-            width: 100%;
-        }
-
-        .issue-item {
-            background: rgba(255, 255, 255, 0.03);
-            border-left: 4px solid var(--accent-purple);
-            padding: 20px;
+            font-size: 1.5rem;
             margin-bottom: 15px;
-            border-radius: 0 10px 10px 0;
+            color: #fff;
         }
 
-        .issue-item h4 {
-            color: #fff;
-            margin-bottom: 5px;
+        /* 表格設計 */
+        .table-container {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .comparison-row {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 0;
+            align-items: center;
+        }
+
+        .comparison-row:last-child {
+            border-bottom: none;
+        }
+
+        .comp-label {
+            flex: 0 0 150px;
+            color: var(--accent-red);
+            font-weight: 700;
             font-size: 1.2rem;
         }
 
-        /* 提問區塊 */
-        .question-box {
-            background: rgba(77, 148, 255, 0.1);
-            border: 1px solid var(--accent-blue);
-            padding: 25px;
-            border-radius: 12px;
-            margin-top: 30px;
-            width: 100%;
+        .comp-content {
+            flex: 1;
+            font-size: 1.1rem;
         }
 
-        .question-box h3 {
-            color: var(--accent-blue);
-            margin-bottom: 15px;
-        }
-
-        /* 留言板樣式 */
-        .chat-container {
+        /* 圖表容器 */
+        .chart-box {
             width: 100%;
-            background: rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            height: 400px;
+            background: linear-gradient(180deg, rgba(20,20,20,0.5), rgba(0,0,0,0.8));
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
             padding: 30px;
-            margin-top: 40px;
+            position: relative;
         }
 
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        input, textarea {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-family: inherit;
-        }
-
-        input:focus, textarea:focus {
-            outline: none;
-            border-color: var(--accent-blue);
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        #sender-name {
-            flex: 1;
-            min-width: 150px;
-        }
-
-        #message-text {
-            width: 100%;
-            min-height: 80px;
-            resize: vertical;
-        }
-
-        button {
-            background: var(--accent-blue);
-            color: #fff;
-            border: none;
-            padding: 10px 25px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.2s;
-            align-self: flex-end;
-        }
-
-        button:hover {
-            background: #3b7ad6;
-            transform: translateY(-2px);
+        /* SVG 動畫 */
+        .chart-path {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: dash 3s ease-out forwards;
         }
         
-        button:disabled {
-            background: #555;
-            cursor: not-allowed;
-            transform: none;
+        .chart-path-delay {
+            animation-delay: 0.5s;
         }
 
-        .comments-list {
-            margin-top: 30px;
-            max-height: 500px;
-            overflow-y: auto;
-            padding-right: 10px;
-        }
-
-        /* 自定義捲軸 */
-        .comments-list::-webkit-scrollbar {
-            width: 8px;
-        }
-        .comments-list::-webkit-scrollbar-track {
-            background: rgba(255,255,255,0.05);
-        }
-        .comments-list::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.2);
-            border-radius: 4px;
-        }
-
-        .message-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-left: 3px solid var(--text-muted);
-        }
-
-        .msg-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-            color: var(--accent-blue);
-        }
-        
-        .msg-time {
-            color: #666;
-            font-size: 0.8rem;
+        @keyframes dash {
+            to { stroke-dashoffset: 0; }
         }
 
         /* 捲動動畫 Reveal */
@@ -395,6 +216,14 @@
             transform: translateY(0);
         }
 
+        /* Footer */
+        .big-statement {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 900;
+            text-align: center;
+            line-height: 1.3;
+        }
+        
         /* 導航點 */
         .nav-dots {
             position: fixed;
@@ -417,14 +246,18 @@
         }
 
         .dot.active {
-            background: var(--accent-blue);
+            background: var(--accent-red);
             transform: scale(1.3);
-            box-shadow: 0 0 10px var(--accent-blue);
+            box-shadow: 0 0 10px var(--accent-red);
         }
 
         @media (max-width: 768px) {
+            .comparison-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
             .nav-dots { display: none; }
-            section { padding: 40px 20px; min-height: auto; }
         }
     </style>
 </head>
@@ -440,117 +273,168 @@
         <div class="dot" onclick="scrollToSection(2)"></div>
         <div class="dot" onclick="scrollToSection(3)"></div>
         <div class="dot" onclick="scrollToSection(4)"></div>
+        <div class="dot" onclick="scrollToSection(5)"></div>
+        <div class="dot" onclick="scrollToSection(6)"></div>
     </div>
 
     <!-- Section 1: 封面 -->
     <section id="s1">
-        <div class="reveal active" style="text-align: center;">
-            <p style="text-transform: uppercase; letter-spacing: 2px; font-size: 0.9rem; margin-bottom: 20px; color: var(--accent-blue);">GMAT TEAM REPORT</p>
-            <h1>GMAT組長意見收集<br><span>書面報告</span></h1>
-            <p style="margin: 20px auto; color: #fff;">針對近期團長管理爭議之觀察與提議</p>
-            <div style="margin-top: 40px;">
-                <i class="fa-solid fa-chevron-down" style="font-size: 1.5rem; animation: bounce 2s infinite;"></i>
+        <div class="reveal active">
+            <p style="text-transform: uppercase; letter-spacing: 3px; font-size: 0.9rem; margin-bottom: 20px; color: var(--accent-red);">Confidential Report</p>
+            <h1>組織風險評估與<br><span>職務調整建議案</span></h1>
+            <p style="font-size: 1.5rem; margin-top: 20px; color: #fff;">為了營隊的生存與下學期的招生，<br>我們必須做出改變。</p>
+            <div style="margin-top: 50px;">
+                <i class="fa-solid fa-chevron-down" style="font-size: 2rem; animation: bounce 2s infinite;"></i>
             </div>
         </div>
     </section>
 
-    <!-- Section 2: 撰寫目的 -->
+    <!-- Section 2: 背景 -->
     <section id="s2">
         <div class="reveal">
-            <h2>一、撰寫目的</h2>
-            <div class="card">
-                <p style="color: #fff; font-size: 1.1rem; line-height: 1.8;">
-                    近日因團長擅自更動組員一事，各組組長認為GMAT團長的行為已存在明顯干擾團隊正常運作的現象，因此共同撰寫本文件作為書面提議，提供給顧問了解整體狀況，並尋求後續建議。
-                </p>
+            <h2>背景：為什麼會有這次評估？</h2>
+            <div style="display: flex; flex-wrap: wrap; gap: 50px; align-items: center; justify-content: center; width: 100%;">
+                <div style="flex: 1; min-width: 300px;">
+                    <p style="font-size: 1.8rem; font-weight: 700; color: #fff;">本屆學員少、缺席不均，<br>必須進行<span class="highlight">組員異動</span>。</p>
+                    <p style="margin-top: 20px;">但在這個敏感時刻，團長的處理方式引爆了危機。我們必須守住以下三條底線：</p>
+                </div>
+                <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 20px;">
+                    <div class="card" style="padding: 25px; border-left: 5px solid var(--accent-green);">
+                        <h3 style="margin:0; color: var(--accent-green); font-size: 1.2rem;">目標 1: 口碑要好</h3>
+                        <p style="font-size: 1rem; margin: 5px 0 0;">絕不能有負評傳回學校與家長耳中。</p>
+                    </div>
+                    <div class="card" style="padding: 25px; border-left: 5px solid var(--accent-green);">
+                        <h3 style="margin:0; color: var(--accent-green); font-size: 1.2rem;">目標 2: 招生要順</h3>
+                        <p style="font-size: 1rem; margin: 5px 0 0;">確保下學期招生基數不崩盤。</p>
+                    </div>
+                    <div class="card" style="padding: 25px; border-left: 5px solid var(--accent-green);">
+                        <h3 style="margin:0; color: var(--accent-green); font-size: 1.2rem;">目標 3: 內部要穩</h3>
+                        <p style="font-size: 1rem; margin: 5px 0 0;">建立自治，不讓顧問頻繁介入救火。</p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- Section 3: 內容 (四大問題) -->
+    <!-- Section 3: 三大罪狀 -->
     <section id="s3">
         <div class="reveal" style="width: 100%;">
-            <h2>二、不妥行為觀察</h2>
-            <p>下列是我們觀察到團長在個別事件中的表現，以及各組組長對於事情的看法：</p>
-            
-            <div class="issue-list" style="margin-top: 30px;">
-                <div class="issue-item">
-                    <h4><i class="fa-solid fa-triangle-exclamation"></i> 針對組員異動傳遞不實消息</h4>
-                    <p style="font-size: 1rem; margin-bottom: 0;">在解釋異動原因時，說詞反覆或與事實不符，造成內部資訊混亂。</p>
+            <h2 style="margin-bottom: 50px;">現況：具體發生了什麼？</h2>
+            <div class="grid-3">
+                <div class="card">
+                    <i class="fa-solid fa-fire-flame-curved"></i>
+                    <h3>情緒攻擊</h3>
+                    <p>處理異動時，針對<span class="highlight">「國籍」</span>與<span class="highlight">「換組事件」</span>發表人身攻擊言論。這不是溝通，是霸凌。</p>
                 </div>
-                <div class="issue-item">
-                    <h4><i class="fa-solid fa-user-slash"></i> 對部分學員態度不佳</h4>
-                    <p style="font-size: 1rem; margin-bottom: 0;">缺乏領導者應有的包容與溝通耐心，引發學員反彈。</p>
+                <div class="card">
+                    <i class="fa-solid fa-mask"></i>
+                    <h3>傳達不實</h3>
+                    <p>關於異動理由，對不同人<span class="highlight">傳達不實消息</span>，製造資訊落差，導致內部信任崩塌。</p>
                 </div>
-                <div class="issue-item">
-                    <h4><i class="fa-solid fa-comments"></i> 對部分顧問態度不佳</h4>
-                    <p style="font-size: 1rem; margin-bottom: 0;">在與顧問溝通時態度消極或不禮貌，影響合作關係。</p>
-                </div>
-                <div class="issue-item">
-                    <h4><i class="fa-solid fa-microphone-slash"></i> 主持或串接活動行為不妥</h4>
-                    <p style="font-size: 1rem; margin-bottom: 0;">台風與控場能力未達預期，影響活動進行與營隊形象。</p>
+                <div class="card">
+                    <i class="fa-solid fa-user-xmark"></i>
+                    <h3>能力與態度</h3>
+                    <p>1. <span class="highlight">銀青交流</span>對顧問態度差。<br>2. 長期不主持幹部會議。<br>3. 上台<span class="highlight">台風欠佳</span>。</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Section 4: 決議與提問 -->
+    <!-- Section 4: 核心問題 -->
     <section id="s4">
         <div class="reveal" style="width: 100%;">
-            <h2>三、決議與顧問諮詢</h2>
-            
-            <div class="card">
-                <h3><i class="fa-solid fa-gavel"></i> 我們的立場</h3>
-                <p>本次意見收集僅各組組長參與。組長們認為團長沒有善盡責任，因此認為他<strong>不適任團長一職</strong>。</p>
-                <p>但對於「去留」與「接任人選」，我們面臨兩難，需要顧問建議：</p>
+            <h2>核心結論：他是組織負資產</h2>
+            <div class="table-container">
+                <div class="comparison-row">
+                    <div class="comp-label">職務執行力</div>
+                    <div class="comp-content">工作內容僅剩「活動串場」，且表現不佳。重要決策會議均未主持，實質功能為零。</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="comp-label">團隊破壞力</div>
+                    <div class="comp-content">針對國籍的人身攻擊 ＋ 異動理由傳達不實 ＝ <span class="highlight">摧毀團隊信任</span>。</div>
+                </div>
+                <div class="comparison-row" style="border-bottom: none;">
+                    <div class="comp-label" style="font-size: 1.5rem;">總結</div>
+                    <div class="comp-content" style="font-size: 1.5rem; font-weight: 700; color: #fff;">
+                        他不僅無法分擔工作，還在製造更多麻煩。
+                    </div>
+                </div>
             </div>
-
-            <div class="question-box">
-                <h3><i class="fa-solid fa-circle-question"></i> 問題一：統籌真空危機</h3>
-                <p style="color: #fff;">就現況而言，我們缺乏意見統籌人物，目前非常仰賴諮就組欣璇姐的幫助才能維持運作。</p>
-                <p><strong>Q：請問顧問覺得在此情況下是否有必要更換團長呢？</strong></p>
-            </div>
-
-            <div class="question-box" style="border-color: var(--accent-purple); background: rgba(157, 77, 255, 0.1);">
-                <h3 style="color: var(--accent-purple);"><i class="fa-solid fa-users-gear"></i> 問題二：接任人選疑慮</h3>
-                <p style="color: #fff;">若更換，目前無敲定人選。</p>
-                <ul style="margin-left: 20px; color: #ccc; margin-bottom: 15px;">
-                    <li><strong>副團長接手：</strong>可能僅是「維持現況」，因其在宣傳影片製作中未展現足夠領導力。</li>
-                    <li><strong>組長接手：</strong>考量情感層面，現任組長們無法接任。</li>
-                </ul>
-                <p><strong>Q：我們需要一名主事者來規劃並確認進度，請問顧問對此有何看法？我們該以哪些維度來選擇適合的領導人？</strong></p>
-            </div>
-
-            <p style="margin-top: 20px; font-size: 0.9rem;">
-                *若希望不更動團長，並透過後續勸說與教育提升團長的能力，我們願意接受安排，但我們的訴求依然是希望能有一位可以盡責統籌幹部的人選。
-            </p>
+            <p style="text-align: center; margin-top: 30px; font-size: 1rem; opacity: 0.7;">組長群共識：希望能將工作平均分配，避免風險擴大。</p>
         </div>
     </section>
 
-    <!-- Section 5: 線上討論區 -->
+    <!-- Section 5: 未來預測圖表 -->
     <section id="s5">
-        <div class="reveal" style="width: 100%;">
-            <h2 style="border-bottom: none; text-align: center; display: block; margin-bottom: 10px;">線上意見留言區</h2>
-            <p style="text-align: center; margin-bottom: 30px;">開放顧問與幹部提供意見，所有擁有連結的人都能即時收到訊息。</p>
-            
-            <div class="chat-container">
-                <!-- 輸入區 -->
-                <div class="input-group">
-                    <input type="text" id="sender-name" placeholder="您的稱呼 (例：XX顧問、XX組長)" />
-                </div>
-                <div class="input-group">
-                    <textarea id="message-text" placeholder="請輸入您的看法或建議..."></textarea>
-                </div>
-                <div style="text-align: right;">
-                    <button id="send-btn" onclick="sendMessage()">送出意見 <i class="fa-solid fa-paper-plane"></i></button>
-                </div>
+        <div class="reveal" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+            <h2>未來預測：兩條路怎麼走？</h2>
+            <div class="chart-box">
+                <svg viewBox="0 0 800 350" style="width: 100%; height: 100%; overflow: visible;">
+                    <!-- 網格線 -->
+                    <line x1="50" y1="300" x2="750" y2="300" stroke="#444" stroke-width="1" />
+                    <line x1="50" y1="50" x2="50" y2="300" stroke="#444" stroke-width="1" />
+                    
+                    <!-- 軸標籤 -->
+                    <text x="700" y="330" fill="#888" font-size="14">時間 (學期末)</text>
+                    <text x="20" y="40" fill="#888" font-size="14" writing-mode="tb" style="transform: rotate(-90deg); transform-origin: 20px 40px;">團隊狀況 / 招生運勢</text>
 
-                <!-- 留言列表 -->
-                <div id="comments-list" class="comments-list">
-                    <p style="text-align:center; color:#aaa; margin-top:20px;">
-                        <i class="fa-solid fa-spinner fa-spin"></i> 載入留言中...
-                    </p>
+                    <!-- 綠線 (換人) -->
+                    <path class="chart-path" d="M50,200 Q200,200 400,100 T750,50" fill="none" stroke="#4caf50" stroke-width="4" />
+                    <circle cx="750" cy="50" r="6" fill="#4caf50">
+                        <animate attributeName="r" values="6;10;6" dur="2s" repeatCount="indefinite" />
+                    </circle>
+                    <text x="770" y="55" fill="#4caf50" font-size="18" font-weight="bold">重分配工作：止跌回升</text>
+
+                    <!-- 紅線 (不換) -->
+                    <path class="chart-path chart-path-delay" d="M50,200 Q200,230 400,280 T750,350" fill="none" stroke="#ff4d4d" stroke-width="4" stroke-dasharray="10,5" />
+                    <circle cx="750" cy="350" r="6" fill="#ff4d4d" />
+                    <text x="770" y="355" fill="#ff4d4d" font-size="18" font-weight="bold">維持現狀：徹底崩壞</text>
+                    
+                    <!-- 現在點 -->
+                    <circle cx="50" cy="200" r="8" fill="#fff" />
+                    <text x="40" y="180" fill="#fff" font-size="14">現在</text>
+                </svg>
+            </div>
+            <p style="margin-top: 20px;">數據顯示：不做決定，就是看著營隊走下坡。</p>
+        </div>
+    </section>
+
+    <!-- Section 6: 解決方案 -->
+    <section id="s6">
+        <div class="reveal" style="width: 100%;">
+            <h2>我們的具體建議</h2>
+            <div style="display: flex; gap: 40px; flex-wrap: wrap; margin-top: 30px;">
+                <div class="card" style="flex: 1; min-width: 300px; border: 2px solid var(--accent-red); background: rgba(255, 77, 77, 0.05);">
+                    <h3 style="color: var(--accent-red);">1. 調整職權 (Stop)</h3>
+                    <p style="color: #eee;">既然他不主持會議、台風也不好，<br>請顧問同意<strong>暫停其職務</strong>。</p>
+                    <ul style="margin-top: 15px; padding-left: 20px; color: #aaa;">
+                        <li>停止代表營隊發言</li>
+                        <li>停止主持大型活動</li>
+                    </ul>
+                </div>
+                <div class="card" style="flex: 1; min-width: 300px; border: 2px solid var(--accent-green); background: rgba(76, 175, 80, 0.05);">
+                    <h3 style="color: var(--accent-green);">2. 平均分配 (Go)</h3>
+                    <p style="color: #eee;">由四組組長平均分攤剩餘工作。<br>大家已經在做了，只需<strong>名正言順</strong>。</p>
+                    <ul style="margin-top: 15px; padding-left: 20px; color: #aaa;">
+                        <li>組長接手會議主持</li>
+                        <li>副團長接手對外窗口</li>
+                    </ul>
                 </div>
             </div>
+        </div>
+    </section>
+
+    <!-- Section 7: 結尾 -->
+    <section id="s7" style="text-align: center;">
+        <div class="reveal">
+            <div class="big-statement">
+                長痛不如短痛。<br>
+                為了<span style="color: var(--accent-red); text-shadow: var(--glow-red);">下學期招生</span>，<br>
+                現在就要做決定。
+            </div>
+            <button style="margin-top: 50px; padding: 15px 40px; font-size: 1.2rem; background: #fff; color: #000; border: none; border-radius: 50px; cursor: pointer; font-weight: 700; transition: transform 0.2s;" onclick="alert('報告結束，請進行討論。')">
+                開啟討論
+            </button>
         </div>
     </section>
 
@@ -559,7 +443,7 @@
         const observerOptions = {
             root: null,
             rootMargin: '0px',
-            threshold: 0.1
+            threshold: 0.15
         };
 
         const observer = new IntersectionObserver((entries, observer) => {
@@ -575,7 +459,7 @@
             observer.observe(el);
         });
 
-        // Navigation Logic
+        // Navigation Dot Logic
         function scrollToSection(index) {
             const sectionId = 's' + (index + 1);
             const section = document.getElementById(sectionId);
@@ -593,13 +477,13 @@
             });
         }
 
-        // CSS Injection for Bounce Animation
+        // Bouncing animation CSS injection
         const styleSheet = document.createElement("style");
         styleSheet.innerText = `
             @keyframes bounce {
                 0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
-                40% {transform: translateY(-10px);}
-                60% {transform: translateY(-5px);}
+                40% {transform: translateY(-20px);}
+                60% {transform: translateY(-10px);}
             }
         `;
         document.head.appendChild(styleSheet);

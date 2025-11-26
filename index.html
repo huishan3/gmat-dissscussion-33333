@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>營隊組織風險評估</title>
+    <title>營隊組織風險評估 (AI Powered)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Markdown Parser for AI response -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
 /* 基礎設定 */
@@ -92,6 +95,107 @@ th { color: #ff4d4d; font-size: 22px; width: 30%; }
   line-height: 1.4;
 }
 .big-statement span { color: #ff4d4d; }
+
+/* =========================================
+   AI 助手區塊樣式
+   ========================================= */
+.ai-section {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 15px;
+}
+
+.ai-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.ai-btn {
+    background: linear-gradient(135deg, #2b5876, #4e4376);
+    border: 1px solid #666;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+}
+
+.ai-btn:hover {
+    filter: brightness(1.2);
+    transform: translateY(-2px);
+}
+
+.ai-btn i {
+    color: #ffd700; /* Gold for sparkle */
+}
+
+.ai-display {
+    flex: 1;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 20px;
+    overflow-y: auto;
+    font-size: 16px;
+    color: #c9d1d9;
+    font-family: 'Noto Sans TC', monospace;
+    line-height: 1.6;
+}
+
+/* Scrollbar for AI display */
+.ai-display::-webkit-scrollbar { width: 8px; }
+.ai-display::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+.ai-input-group {
+    display: flex;
+    gap: 10px;
+}
+
+.ai-input {
+    flex: 1;
+    background: #161b22;
+    border: 1px solid #30363d;
+    color: #fff;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.ai-submit {
+    background: #238636;
+    border: none;
+    color: #fff;
+    padding: 0 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.ai-submit:disabled {
+    background: #333;
+    cursor: not-allowed;
+}
+
+.loading {
+    display: inline-block;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.3; }
+    50% { opacity: 1; }
+    100% { opacity: 0.3; }
+}
+
+/* Markdown Styles in AI Display */
+.ai-display h1, .ai-display h2, .ai-display h3 { margin-top: 10px; color: #fff; font-size: 1.2em; border: none; padding: 0; }
+.ai-display ul { padding-left: 20px; }
+.ai-display strong { color: #ff4d4d; }
 
     </style>
 </head>
@@ -217,6 +321,33 @@ th { color: #ff4d4d; font-size: 22px; width: 30%; }
     <p style="margin-top: 40px; text-align: center;">這是成本最低、風險最小的決定。</p>
 </div>
 
+<!-- New AI Slide -->
+<div class="slide">
+    <h2 style="border-left-color: #4d94ff; color: #4d94ff;">AI 決策執行助手</h2>
+    <div class="ai-section">
+        <p style="margin:0; font-size: 16px;">既然決定要處理，下一步該怎麼說？讓 AI 幫您擬稿。</p>
+        
+        <div class="ai-controls">
+            <button class="ai-btn" onclick="askGemini('draft_interview')"><i class="fa-solid fa-wand-magic-sparkles"></i> 擬定面談劇本</button>
+            <button class="ai-btn" onclick="askGemini('draft_announcement')"><i class="fa-solid fa-bullhorn"></i> 撰寫內部公告</button>
+            <button class="ai-btn" onclick="askGemini('analyze_risks')"><i class="fa-solid fa-shield-halved"></i> 預判反彈風險</button>
+        </div>
+
+        <div id="ai-response-area" class="ai-display">
+            <div style="color: #666; text-align: center; margin-top: 50px;">
+                <i class="fa-brands fa-google" style="font-size: 40px; margin-bottom: 10px;"></i><br>
+                Powered by Gemini 2.5<br>
+                請選擇上方功能或在下方輸入問題...
+            </div>
+        </div>
+
+        <div class="ai-input-group">
+            <input type="text" id="custom-prompt" class="ai-input" placeholder="例如：如果團長拒絕卸任，我該怎麼回應？" onkeypress="handleEnter(event)">
+            <button class="ai-submit" onclick="submitCustomPrompt()">發送</button>
+        </div>
+    </div>
+</div>
+
 <!-- 結尾 -->
 <div class="slide" style="text-align: center; background: #000;">
     <div class="big-statement">
@@ -225,6 +356,86 @@ th { color: #ff4d4d; font-size: 22px; width: 30%; }
         現在就要做決定。
     </div>
 </div>
+
+<script>
+    const apiKey = ""; // System will provide the key
+    
+    // Context about the situation (The "Truth")
+    const context = `
+    你是一個專業的組織管理與危機處理顧問。
+    情境：一個學生營隊的幹部群正在建議撤換「現任團長」。
+    
+    團長的具體問題（罪狀）：
+    1. 情緒失控：在組員異動時，對組員進行針對性攻擊（包含國籍、個人特徵），導致組員恐慌。
+    2. 誠信問題：關於人事變動理由，對顧問與組員說法不一（說謊），造成內部信任破裂。
+    3. 職務失能：長期不主持會議，對顧問態度不佳，僅剩串場功能且台風不好。
+    
+    目標：
+    - 保護營隊口碑與下學期招生。
+    - 讓團長和平卸任，由「副團長+四組組長」接手。
+    - 降低組織動盪。
+    `;
+
+    const prompts = {
+        'draft_interview': "請擬定一份「顧問與團長的一對一勸退面談劇本」。語氣要堅定但專業，不要流於謾罵，但要清楚指出上述三個問題點（情緒、誠信、能力），並告知為了營隊好，將調整其職務。請列出開場白、核心問題陳述、以及對方可能反駁時的應對話術。",
+        'draft_announcement': "請撰寫一份「給全體組員的職務調整公告」。語氣要正面、安撫人心，不要公開處刑團長，用比較委婉的方式（例如：因應個人規劃與組織分工優化...）來說明團長職務變動，並強調後續由副團長與組長群接手，營運不會受影響。",
+        'analyze_risks': "如果我們現在撤換團長，可能會面臨哪些風險？（例如：他去外面放話、部分死忠組員不滿...等）請列出3個最大風險，並分別給出應對策略。"
+    };
+
+    async function askGemini(type) {
+        const userPrompt = prompts[type];
+        await callLLM(userPrompt);
+    }
+
+    async function submitCustomPrompt() {
+        const input = document.getElementById('custom-prompt');
+        const userPrompt = input.value.trim();
+        if (!userPrompt) return;
+        
+        input.value = '';
+        await callLLM(userPrompt);
+    }
+
+    function handleEnter(e) {
+        if (e.key === 'Enter') submitCustomPrompt();
+    }
+
+    async function callLLM(userQuery) {
+        const display = document.getElementById('ai-response-area');
+        display.innerHTML = '<div style="text-align:center; margin-top:50px;"><span class="loading">✨ AI 正在思考最佳策略...</span></div>';
+        
+        const fullPrompt = context + "\n\n使用者問題：" + userQuery;
+
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: fullPrompt }]
+                    }]
+                })
+            });
+
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error.message);
+            }
+
+            const aiText = data.candidates[0].content.parts[0].text;
+            
+            // Render Markdown
+            display.innerHTML = marked.parse(aiText);
+
+        } catch (error) {
+            console.error('Error:', error);
+            display.innerHTML = `<div style="color: #ff4d4d; text-align: center;">⚠️ 發生錯誤：${error.message}</div>`;
+        }
+    }
+</script>
 
 </body>
 </html>
